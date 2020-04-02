@@ -2,6 +2,7 @@ package cromp
 
 import (
 	"bufio"
+	"io/ioutil"
 	"os"
 	"regexp"
 	"time"
@@ -29,6 +30,11 @@ type Header struct {
 	UUID   uuid.UUID
 }
 
+// ReadFileBody grabs the entire file
+func ReadFileBody(f string) ([]byte, error) {
+	return ioutil.ReadFile(f)
+}
+
 //ParseFileHeader grabs the header info out of an existing file
 func ParseFileHeader(f string) (*Header, error) {
 	h := &Header{}
@@ -36,6 +42,7 @@ func ParseFileHeader(f string) (*Header, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer file.Close()
 	scanner := bufio.NewScanner(file)
 	if err != nil {
 		return nil, err
