@@ -33,17 +33,46 @@ func Auth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if user.Authed {
-		authedUsers[user.Token.String()] = user
 		// TODO respond with token
 		json.NewEncoder(w).Encode(user)
 	}
+}
+
+// ListEntries handles requests to /entries/list
+func ListEntries(w http.ResponseWriter, r *http.Request) {
+	user, err := getUser(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Println(user.UserID)
+	entries, err := base.GetEntries(ctx, user.UserID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(entries)
 }
 
 // AddEntry handles requests to /entries/add
 func AddEntry(w http.ResponseWriter, r *http.Request) {
 	var e db.CreateEntryParams
 
-	json.NewDecoder(r.Body).Decode(&e)
+	err := json.NewDecoder(r.Body).Decode(&e)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	user, err := getUser(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	e.UserID = user.UserID
 
 	entry, err := base.CreateEntry(ctx, e)
 	if err != nil {
@@ -60,6 +89,27 @@ func Entries(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "The cake is a lie!")
 }
 
-// SimilarEntries
+// SimilarEntries are entries that match some text
 func SimilarEntries(w http.ResponseWriter, r *http.Request) {
+	var e db.SimilarEntriesParams
+	err := json.NewDecoder(r.Body).Decode(&e)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	user, err := getUser(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	e.UserID = user.UserID
+	entries, err := base.SimilarEntries(ctx, e)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(entries)
 }
