@@ -66,7 +66,7 @@ RETURNING entry_id, created_at, to_tsvector(body)
 
 type CreateEntryParams struct {
 	EntryID uuid.UUID `json:"entry_id"`
-	UserID  int32     `json:"user_id"`
+	UserID  int64     `json:"user_id"`
 	Title   string    `json:"title"`
 	Body    string    `json:"body"`
 }
@@ -191,7 +191,7 @@ SELECT entry_id, user_id, created_at, updated_at, title, body FROM entries
 WHERE user_id = $1
 `
 
-func (q *Queries) GetEntries(ctx context.Context, userID int32) ([]Entry, error) {
+func (q *Queries) GetEntries(ctx context.Context, userID int64) ([]Entry, error) {
 	rows, err := q.query(ctx, q.getEntriesStmt, getEntries, userID)
 	if err != nil {
 		return nil, err
@@ -287,19 +287,30 @@ func (q *Queries) GetUserByToken(ctx context.Context, token uuid.UUID) (User, er
 }
 
 const similarEntries = `-- name: SimilarEntries :many
-SELECT entry_id, similarity(body, $1) AS sml
-  FROM entries
-  WHERE body % $1
-  ORDER BY sml DESC, body
+SELECT entry_id, similarity(body, $2) as similarity,
+	ts_headline('english', body, q) as headline,
+	title from entries,
+	plainto_tsquery($2) q
+WHERE user_id = $1 and
+	similarity(body, $2) > 0.0
+	order by similarity DESC
+	LIMIT 10
 `
 
-type SimilarEntriesRow struct {
-	EntryID uuid.UUID   `json:"entry_id"`
-	Sml     interface{} `json:"sml"`
+type SimilarEntriesParams struct {
+	UserID     int64       `json:"user_id"`
+	Similarity interface{} `json:"similarity"`
 }
 
-func (q *Queries) SimilarEntries(ctx context.Context, similarity interface{}) ([]SimilarEntriesRow, error) {
-	rows, err := q.query(ctx, q.similarEntriesStmt, similarEntries, similarity)
+type SimilarEntriesRow struct {
+	EntryID    uuid.UUID   `json:"entry_id"`
+	Similarity interface{} `json:"similarity"`
+	Headline   interface{} `json:"headline"`
+	Title      string      `json:"title"`
+}
+
+func (q *Queries) SimilarEntries(ctx context.Context, arg SimilarEntriesParams) ([]SimilarEntriesRow, error) {
+	rows, err := q.query(ctx, q.similarEntriesStmt, similarEntries, arg.UserID, arg.Similarity)
 	if err != nil {
 		return nil, err
 	}
@@ -307,7 +318,12 @@ func (q *Queries) SimilarEntries(ctx context.Context, similarity interface{}) ([
 	var items []SimilarEntriesRow
 	for rows.Next() {
 		var i SimilarEntriesRow
-		if err := rows.Scan(&i.EntryID, &i.Sml); err != nil {
+		if err := rows.Scan(
+			&i.EntryID,
+			&i.Similarity,
+			&i.Headline,
+			&i.Title,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

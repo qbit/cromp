@@ -11,7 +11,7 @@ import (
 
 type Entry struct {
 	EntryID   uuid.UUID    `json:"entry_id"`
-	UserID    int32        `json:"user_id"`
+	UserID    int64        `json:"user_id"`
 	CreatedAt time.Time    `json:"created_at"`
 	UpdatedAt sql.NullTime `json:"updated_at"`
 	Title     string       `json:"title"`
