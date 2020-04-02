@@ -19,10 +19,14 @@ DELETE FROM entries
 WHERE entry_id = $1;
 
 -- name: SimilarEntries :many
-SELECT entry_id, similarity(body, $1) AS sml
-  FROM entries
-  WHERE body % $1
-  ORDER BY sml DESC, body;
+SELECT entry_id, similarity(body, $2) as similarity,
+	ts_headline('english', body, q) as headline,
+	title from entries,
+	plainto_tsquery($2) q
+WHERE user_id = $1 and
+	similarity(body, $2) > 0.0
+	order by similarity DESC
+	LIMIT 10;
 
 -- name: CreateUser :one
 INSERT INTO users (

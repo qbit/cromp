@@ -18,15 +18,15 @@ CREATE TABLE users (
 );
 
 CREATE TABLE entries (
-	entry_id	UUID		NOT NULL default gen_random_uuid() PRIMARY KEY,
-	user_id		int		NOT NULL REFERENCES users ON DELETE CASCADE,
+	entry_id	UUID		NOT NULL default gen_random_uuid() PRIMARY KEY UNIQUE,
+	user_id		BIGSERIAL	NOT NULL REFERENCES users ON DELETE CASCADE,
 	created_at	timestamp 	NOT NULL DEFAULT NOW(),
 	updated_at	timestamp,
 	title		text		NOT NULL DEFAULT '',
 	body		text		NOT NULL DEFAULT ''
 );
 
-CREATE INDEX body_idx ON entries USING GIN (body gin_trgm_ops);
+CREATE INDEX body_trgm_idx ON entries USING gist (body gist_trgm_ops);
 
 CREATE OR REPLACE FUNCTION hash(password text) RETURNS text AS $$
 	SELECT crypt(password, gen_salt('bf', 10));
