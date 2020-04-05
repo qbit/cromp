@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"flag"
 	"io/ioutil"
 	"os/user"
 	"path"
+
+	"github.com/peterbourgon/ff/v2/ffcli"
 )
 
 func getPath() (*string, error) {
@@ -52,4 +56,30 @@ func (c *Config) ReadConfig() error {
 	}
 
 	return json.Unmarshal(data, c)
+}
+
+// NewConfig creates a new config ffcli command
+func NewConfig() *ffcli.Command {
+	var configFlagSet = flag.NewFlagSet("cromp config", flag.ExitOnError)
+	urlConfFS := configFlagSet.String("url", "", "URL of cromp server")
+	tokenConfFS := configFlagSet.String("token", "", "Access token for cromp server")
+
+	return &ffcli.Command{
+		Name:       "config",
+		ShortUsage: "cromp config -token [token] -url [url]",
+		FlagSet:    configFlagSet,
+		Exec: func(ctx context.Context, args []string) error {
+			cfg := &Config{
+				Token: *tokenConfFS,
+				URL:   *urlConfFS,
+			}
+
+			err := cfg.WriteConfig()
+			if err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
 }
