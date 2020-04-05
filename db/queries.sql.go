@@ -33,7 +33,7 @@ type AuthUserRow struct {
 	LastName     string    `json:"last_name"`
 	Username     string    `json:"username"`
 	Email        string    `json:"email"`
-	Token        uuid.UUID `json:"token"`
+	Token        string    `json:"token"`
 	TokenExpires time.Time `json:"token_expires"`
 	Authed       bool      `json:"authed"`
 }
@@ -109,7 +109,7 @@ type CreateUserParams struct {
 type CreateUserRow struct {
 	UserID       int64     `json:"user_id"`
 	Username     string    `json:"username"`
-	Token        uuid.UUID `json:"token"`
+	Token        string    `json:"token"`
 	TokenExpires time.Time `json:"token_expires"`
 }
 
@@ -131,14 +131,17 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 	return i, err
 }
 
-const deleteEntry = `-- name: DeleteEntry :exec
+const deleteEntry = `-- name: DeleteEntry :execrows
 DELETE FROM entries
 WHERE entry_id = $1
 `
 
-func (q *Queries) DeleteEntry(ctx context.Context, entryID uuid.UUID) error {
-	_, err := q.exec(ctx, q.deleteEntryStmt, deleteEntry, entryID)
-	return err
+func (q *Queries) DeleteEntry(ctx context.Context, entryID uuid.UUID) (int64, error) {
+	result, err := q.exec(ctx, q.deleteEntryStmt, deleteEntry, entryID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const deleteUser = `-- name: DeleteUser :exec
@@ -156,7 +159,7 @@ SELECT entry_id, user_id, created_at, updated_at, title, body FROM entries
 WHERE user_id = (SELECT user_id FROM users WHERE token = $1 limit 1)
 `
 
-func (q *Queries) EntriesByToken(ctx context.Context, token uuid.UUID) ([]Entry, error) {
+func (q *Queries) EntriesByToken(ctx context.Context, token string) ([]Entry, error) {
 	rows, err := q.query(ctx, q.entriesByTokenStmt, entriesByToken, token)
 	if err != nil {
 		return nil, err
@@ -268,7 +271,7 @@ SELECT user_id, created_at, updated_at, first_name, last_name, username, hash, e
 WHERE token = $1 LIMIT 1
 `
 
-func (q *Queries) GetUserByToken(ctx context.Context, token uuid.UUID) (User, error) {
+func (q *Queries) GetUserByToken(ctx context.Context, token string) (User, error) {
 	row := q.queryRow(ctx, q.getUserByTokenStmt, getUserByToken, token)
 	var i User
 	err := row.Scan(
@@ -290,7 +293,7 @@ const similarEntries = `-- name: SimilarEntries :many
 SELECT entry_id, similarity(body, $2) as similarity,
 	ts_headline('english', body, q) as headline,
 	title from entries,
-	plainto_tsquery($2) q
+	to_tsquery($2) q
 WHERE user_id = $1 and
 	similarity(body, $2) > 0.0
 	order by similarity DESC
@@ -337,12 +340,33 @@ func (q *Queries) SimilarEntries(ctx context.Context, arg SimilarEntriesParams) 
 	return items, nil
 }
 
+const updateEntry = `-- name: UpdateEntry :execrows
+UPDATE entries SET
+	title = $2,
+	body = $3
+WHERE entry_id = $1
+`
+
+type UpdateEntryParams struct {
+	EntryID uuid.UUID `json:"entry_id"`
+	Title   string    `json:"title"`
+	Body    string    `json:"body"`
+}
+
+func (q *Queries) UpdateEntry(ctx context.Context, arg UpdateEntryParams) (int64, error) {
+	result, err := q.exec(ctx, q.updateEntryStmt, updateEntry, arg.EntryID, arg.Title, arg.Body)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const validToken = `-- name: ValidToken :one
 SELECT now() < token_created FROM users
 WHERE token = $1 LIMIT 1
 `
 
-func (q *Queries) ValidToken(ctx context.Context, token uuid.UUID) (bool, error) {
+func (q *Queries) ValidToken(ctx context.Context, token string) (bool, error) {
 	row := q.queryRow(ctx, q.validTokenStmt, validToken, token)
 	var column_1 bool
 	err := row.Scan(&column_1)

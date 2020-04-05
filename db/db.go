@@ -55,6 +55,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.similarEntriesStmt, err = db.PrepareContext(ctx, similarEntries); err != nil {
 		return nil, fmt.Errorf("error preparing query SimilarEntries: %w", err)
 	}
+	if q.updateEntryStmt, err = db.PrepareContext(ctx, updateEntry); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateEntry: %w", err)
+	}
 	if q.validTokenStmt, err = db.PrepareContext(ctx, validToken); err != nil {
 		return nil, fmt.Errorf("error preparing query ValidToken: %w", err)
 	}
@@ -118,6 +121,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing similarEntriesStmt: %w", cerr)
 		}
 	}
+	if q.updateEntryStmt != nil {
+		if cerr := q.updateEntryStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateEntryStmt: %w", cerr)
+		}
+	}
 	if q.validTokenStmt != nil {
 		if cerr := q.validTokenStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing validTokenStmt: %w", cerr)
@@ -173,6 +181,7 @@ type Queries struct {
 	getUserStmt        *sql.Stmt
 	getUserByTokenStmt *sql.Stmt
 	similarEntriesStmt *sql.Stmt
+	updateEntryStmt    *sql.Stmt
 	validTokenStmt     *sql.Stmt
 }
 
@@ -191,6 +200,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getUserStmt:        q.getUserStmt,
 		getUserByTokenStmt: q.getUserByTokenStmt,
 		similarEntriesStmt: q.similarEntriesStmt,
+		updateEntryStmt:    q.updateEntryStmt,
 		validTokenStmt:     q.validTokenStmt,
 	}
 }

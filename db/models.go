@@ -27,6 +27,6 @@ type User struct {
 	Username     string       `json:"username"`
 	Hash         string       `json:"hash"`
 	Email        string       `json:"email"`
-	Token        uuid.UUID    `json:"token"`
+	Token        string       `json:"token"`
 	TokenExpires time.Time    `json:"token_expires"`
 }

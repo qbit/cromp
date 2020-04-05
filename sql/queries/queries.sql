@@ -6,6 +6,12 @@ INSERT INTO entries (
 )
 RETURNING entry_id, created_at, to_tsvector(body);
 
+-- name: UpdateEntry :execrows
+UPDATE entries SET
+	title = $2,
+	body = $3
+WHERE entry_id = $1;
+
 -- name: GetEntry :one
 SELECT * FROM entries
 WHERE entry_id = $1 LIMIT 1;
@@ -14,7 +20,7 @@ WHERE entry_id = $1 LIMIT 1;
 SELECT * FROM entries
 WHERE user_id = $1;
 
--- name: DeleteEntry :exec
+-- name: DeleteEntry :execrows
 DELETE FROM entries
 WHERE entry_id = $1;
 
@@ -22,7 +28,7 @@ WHERE entry_id = $1;
 SELECT entry_id, similarity(body, $2) as similarity,
 	ts_headline('english', body, q) as headline,
 	title from entries,
-	plainto_tsquery($2) q
+	to_tsquery($2) q
 WHERE user_id = $1 and
 	similarity(body, $2) > 0.0
 	order by similarity DESC

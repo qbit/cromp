@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 	"suah.dev/cromp/db"
 )
@@ -33,12 +32,7 @@ func getUser(r *http.Request) (*db.User, error) {
 		return nil, fmt.Errorf("Unauthorized")
 	}
 
-	u, err := uuid.Parse(token)
-	if err != nil {
-		return nil, err
-	}
-
-	user, err := base.GetUserByToken(ctx, u)
+	user, err := base.GetUserByToken(ctx, token)
 	if err != nil {
 		return nil, err
 	}
