@@ -21,6 +21,7 @@ func main() {
 		FlagSet:    rootFlagSet,
 		Subcommands: []*ffcli.Command{
 			NewConfig(),
+			NewEditor(),
 			NewLoad(),
 			NewLogin(),
 			NewPOS(),
