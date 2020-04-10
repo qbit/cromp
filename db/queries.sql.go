@@ -226,11 +226,17 @@ func (q *Queries) GetEntries(ctx context.Context, userID int64) ([]Entry, error)
 
 const getEntry = `-- name: GetEntry :one
 SELECT entry_id, user_id, created_at, updated_at, title, body FROM entries
-WHERE entry_id = $1 LIMIT 1
+WHERE entry_id = $1 and user_id = $2
+LIMIT 1
 `
 
-func (q *Queries) GetEntry(ctx context.Context, entryID uuid.UUID) (Entry, error) {
-	row := q.queryRow(ctx, q.getEntryStmt, getEntry, entryID)
+type GetEntryParams struct {
+	EntryID uuid.UUID `json:"entry_id"`
+	UserID  int64     `json:"user_id"`
+}
+
+func (q *Queries) GetEntry(ctx context.Context, arg GetEntryParams) (Entry, error) {
+	row := q.queryRow(ctx, q.getEntryStmt, getEntry, arg.EntryID, arg.UserID)
 	var i Entry
 	err := row.Scan(
 		&i.EntryID,

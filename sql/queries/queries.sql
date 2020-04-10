@@ -14,7 +14,8 @@ WHERE entry_id = $1;
 
 -- name: GetEntry :one
 SELECT * FROM entries
-WHERE entry_id = $1 LIMIT 1;
+WHERE entry_id = $1 and user_id = $2
+LIMIT 1;
 
 -- name: GetEntries :many
 SELECT * FROM entries
