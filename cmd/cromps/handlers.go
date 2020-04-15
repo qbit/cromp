@@ -83,10 +83,58 @@ func AddEntry(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(entry)
 }
 
+// UpdateEntries handles requests to /etries/update
+func UpdateEntries(w http.ResponseWriter, r *http.Request) {
+	var params db.UpdateEntryParams
+
+	err := json.NewDecoder(r.Body).Decode(&params)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	user, err := getUser(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	params.UserID = user.UserID
+
+	entry, err := base.UpdateEntry(ctx, params)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(entry)
+}
+
 // Entries handles requests to /entries
 func Entries(w http.ResponseWriter, r *http.Request) {
-	// Print secret message
-	fmt.Fprintln(w, "The cake is a lie!")
+	var params db.GetEntryParams
+
+	err := json.NewDecoder(r.Body).Decode(&params)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	user, err := getUser(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	params.UserID = user.UserID
+
+	entry, err := base.GetEntry(ctx, params)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(entry)
 }
 
 // SimilarEntries are entries that match some text

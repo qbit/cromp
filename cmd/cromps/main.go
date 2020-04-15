@@ -75,8 +75,7 @@ func main() {
 	http.HandleFunc("/entries/list", checkAuth(logger(ListEntries)))
 	http.HandleFunc("/entries/delete", checkAuth(logger(Entries)))
 	http.HandleFunc("/entries/get", checkAuth(logger(Entries)))
-	http.HandleFunc("/entries/update", checkAuth(logger(Entries)))
+	http.HandleFunc("/entries/update", checkAuth(logger(UpdateEntries)))
 	http.HandleFunc("/entries/similar", checkAuth(logger(SimilarEntries)))
-
 	log.Fatalln(http.ListenAndServe(":8080", nil))
 }
