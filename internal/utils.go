@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,8 +14,8 @@ import (
 // AuthorRE is a regex to grab our Authors
 var AuthorRE = regexp.MustCompile(`^author:\s(.*)$`)
 
-// TitleRE matches our article title
-var TitleRE = regexp.MustCompile(`^title:\s(.*)$`)
+// TitleRE matches our article title for either plain text or org-mode
+var TitleRE = regexp.MustCompile(`^(?:\*|title:)\s(.*)$`)
 
 // DateRE matches our article date
 var DateRE = regexp.MustCompile(`^date:\s(.*)$`)
@@ -33,6 +34,46 @@ type Header struct {
 // ReadFileBody grabs the entire file
 func ReadFileBody(f string) ([]byte, error) {
 	return ioutil.ReadFile(f)
+}
+
+//ParseHeader grabs the header info out of a string
+func ParseHeader(f string) (*Header, error) {
+	var err error
+	h := &Header{}
+	for _, line := range strings.Split(f, "\n") {
+		if AuthorRE.MatchString(line) {
+			aline := AuthorRE.ReplaceAllString(line, "$1")
+			if h.Author == "" {
+				h.Author = aline
+			}
+		}
+
+		if TitleRE.MatchString(line) {
+			if h.Title == "" {
+				h.Title = TitleRE.ReplaceAllString(line, "$1")
+			}
+		}
+
+		if DateRE.MatchString(line) {
+			if h.Date.String() == "" {
+				d := DateRE.ReplaceAllString(line, "$1")
+				h.Date, err = time.Parse(time.RFC1123, d)
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+
+		if UUIDRE.MatchString(line) {
+			u := UUIDRE.ReplaceAllString(line, "$1")
+			h.UUID, err = uuid.Parse(u)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return h, nil
 }
 
 //ParseFileHeader grabs the header info out of an existing file
