@@ -17,7 +17,7 @@ func main() {
 	)
 
 	root := &ffcli.Command{
-		ShortUsage: "cromp <subcommand>",
+		ShortUsage: "cromp",
 		FlagSet:    rootFlagSet,
 		Subcommands: []*ffcli.Command{
 			NewConfig(),
@@ -29,7 +29,14 @@ func main() {
 			NewSimilar(),
 		},
 		Exec: func(context.Context, []string) error {
-			return flag.ErrHelp
+			entryID, err := NewDoc()
+			if err != nil {
+				return err
+			}
+
+			fmt.Printf("Created entry: %s\n", entryID.String())
+
+			return nil
 		},
 	}
 

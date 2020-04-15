@@ -31,6 +31,12 @@ func NewLogin() *ffcli.Command {
 				return fmt.Errorf("please specify -url")
 			}
 
+			cfg.URL = *urlConfFS
+			err = cfg.WriteConfig()
+			if err != nil {
+				return err
+			}
+
 			user, err := Prompt("Login: ")
 			if err != nil {
 				return err
