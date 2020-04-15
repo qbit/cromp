@@ -297,7 +297,7 @@ func (q *Queries) GetUserByToken(ctx context.Context, token string) (User, error
 
 const similarEntries = `-- name: SimilarEntries :many
 SELECT entry_id, similarity(body, $2) as similarity,
-	ts_headline('english', body, q) as headline,
+	ts_headline('english', body, q, 'StartSel = <b>, StopSel = </b>') as headline,
 	title from entries,
 	to_tsquery($2) q
 WHERE user_id = $1 and
@@ -348,19 +348,26 @@ func (q *Queries) SimilarEntries(ctx context.Context, arg SimilarEntriesParams) 
 
 const updateEntry = `-- name: UpdateEntry :execrows
 UPDATE entries SET
-	title = $2,
-	body = $3
-WHERE entry_id = $1
+	title = $3,
+	body = $4
+WHERE entry_id = $1 and
+user_id = $2
 `
 
 type UpdateEntryParams struct {
 	EntryID uuid.UUID `json:"entry_id"`
+	UserID  int64     `json:"user_id"`
 	Title   string    `json:"title"`
 	Body    string    `json:"body"`
 }
 
 func (q *Queries) UpdateEntry(ctx context.Context, arg UpdateEntryParams) (int64, error) {
-	result, err := q.exec(ctx, q.updateEntryStmt, updateEntry, arg.EntryID, arg.Title, arg.Body)
+	result, err := q.exec(ctx, q.updateEntryStmt, updateEntry,
+		arg.EntryID,
+		arg.UserID,
+		arg.Title,
+		arg.Body,
+	)
 	if err != nil {
 		return 0, err
 	}
