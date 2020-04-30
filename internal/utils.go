@@ -15,7 +15,7 @@ import (
 var AuthorRE = regexp.MustCompile(`^author:\s(.*)$`)
 
 // TitleRE matches our article title for either plain text or org-mode
-var TitleRE = regexp.MustCompile(`^(?:\*|title:)\s(.*)$`)
+var TitleRE = regexp.MustCompile(`^(?:\*|title:|#)\s(.*)$`)
 
 // DateRE matches our article date
 var DateRE = regexp.MustCompile(`^date:\s(.*)$`)
