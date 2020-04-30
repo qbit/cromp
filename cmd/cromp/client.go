@@ -51,7 +51,7 @@ func Get(url string, resBody interface{}) error {
 			return err
 		}
 
-		fmt.Println(string(data))
+		return fmt.Errorf(string(data))
 	}
 
 	return nil
@@ -104,7 +104,7 @@ func Post(url string, reqBody, resBody interface{}) (err error) {
 			return err
 		}
 
-		fmt.Println(string(data))
+		return fmt.Errorf(string(data))
 	}
 
 	return nil
