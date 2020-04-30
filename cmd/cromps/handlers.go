@@ -29,7 +29,8 @@ func Auth(w http.ResponseWriter, r *http.Request) {
 
 	user, err := base.AuthUser(ctx, p)
 	if err != nil {
-		panic(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	if user.Authed {
