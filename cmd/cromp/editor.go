@@ -46,7 +46,6 @@ func NewEditor() *ffcli.Command {
 
 // NewDoc opens a new doc in $EDITOR
 func NewDoc() (*uuid.UUID, error) {
-	var s string
 	entry := &db.CreateEntryParams{}
 	editor, args := editorCmd()
 
@@ -63,6 +62,14 @@ func NewDoc() (*uuid.UUID, error) {
 
 	// TODO populate with a user defined template here
 	f.Write([]byte(entry.Body))
+
+	// Save our file to cromps so we can use update going forward.
+	result := make(map[string]string)
+
+	err = Post("/entries/add", entry, result)
+	if err != nil {
+		return nil, err
+	}
 
 	done := make(chan bool)
 	go func() {
@@ -81,32 +88,6 @@ func NewDoc() (*uuid.UUID, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	b, err := ioutil.ReadFile(f.Name())
-	if err != nil {
-		return nil, err
-	}
-
-	close(done)
-
-	s = string(b)
-
-	header, err := cromp.ParseHeader(s)
-	if err != nil {
-		return nil, err
-	}
-
-	entry.Title = header.Title
-	entry.Body = s
-
-	result := make(map[string]string)
-
-	err = Post("/entries/add", entry, result)
-	if err != nil {
-		return nil, err
-	}
-
-	fmt.Printf("%#v\n", result)
 
 	return &entry.EntryID, nil
 }
@@ -198,7 +179,6 @@ func saveEntry(fn string, p interface{}) error {
 			return err
 		}
 	case db.CreateEntryParams:
-		fmt.Println("Create")
 		a, ok := p.(db.CreateEntryParams)
 		if !ok {
 			return fmt.Errorf("invaled entry type")
@@ -207,7 +187,7 @@ func saveEntry(fn string, p interface{}) error {
 		createParams.Body = s
 		createParams.Title = header.Title
 
-		err = Post("/entries/add", createParams, result)
+		err = Post("/entries/update", createParams, result)
 		if err != nil {
 			return err
 		}
