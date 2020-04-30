@@ -1,19 +1,28 @@
 package main
 
 import (
-	"image/color"
 	"log"
 
 	"gioui.org/app"
 	"gioui.org/io/system"
 	"gioui.org/layout"
-	"gioui.org/text"
+	"gioui.org/widget"
 	"gioui.org/widget/material"
 
 	"gioui.org/font/gofont"
 )
 
+type state struct {
+	entryList layout.List
+	editor    widget.Editor
+}
+
 func main() {
+	appState.entryList.Axis = layout.Vertical
+	appState.entryList.Alignment = layout.Start
+
+	appState.editor.Submit = true
+
 	go func() {
 		w := app.NewWindow()
 		if err := loop(w); err != nil {
@@ -23,10 +32,13 @@ func main() {
 	app.Main()
 }
 
+var appState state
+
 func loop(w *app.Window) error {
 	gofont.Register()
 	th := material.NewTheme()
 	gtx := layout.NewContext(w.Queue())
+
 	for {
 		e := <-w.Events()
 		switch e := e.(type) {
@@ -34,12 +46,13 @@ func loop(w *app.Window) error {
 			return e.Err
 		case system.FrameEvent:
 			gtx.Reset(e.Config, e.Size)
-			l := th.H1("Hello, Gio")
-			maroon := color.RGBA{127, 0, 0, 255}
-			l.Color = maroon
-			l.Alignment = text.Middle
-			l.Layout(gtx)
+
+			render(gtx, th)
+
 			e.Frame(gtx.Ops)
 		}
 	}
+}
+
+func render(gtx *layout.Context, th *material.Theme) {
 }
