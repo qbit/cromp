@@ -5,10 +5,12 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"strings"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/google/uuid"
 	"github.com/peterbourgon/ff/v2/ffcli"
 	"suah.dev/cromp/db"
@@ -62,6 +64,15 @@ func NewDoc() (*uuid.UUID, error) {
 	// TODO populate with a user defined template here
 	f.Write([]byte(entry.Body))
 
+	done := make(chan bool)
+	go func() {
+		err = StartWatcher(f.Name(), *entry, saveEntry)
+		if err != nil {
+			log.Println(err)
+		}
+		<-done
+	}()
+
 	cmd := exec.Command(editor, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
@@ -75,6 +86,9 @@ func NewDoc() (*uuid.UUID, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	close(done)
+
 	s = string(b)
 
 	header, err := cromp.ParseHeader(s)
@@ -112,6 +126,96 @@ func editorCmd() (string, []string) {
 	return editor, args
 }
 
+// StartWatcher executes the callbacke "f" when the file is modified
+func StartWatcher(p string, params interface{}, f func(string, interface{}) error) error {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return err
+	}
+	defer watcher.Close()
+
+	done := make(chan bool)
+	go func() {
+		for {
+			select {
+			case event, ok := <-watcher.Events:
+				if !ok {
+					return
+				}
+				err := f(p, params)
+				if err != nil {
+					log.Println(err)
+				}
+				if event.Op&fsnotify.Write == fsnotify.Write {
+				}
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					return
+				}
+				log.Println(err)
+			}
+		}
+	}()
+
+	err = watcher.Add(p)
+	if err != nil {
+		return err
+	}
+	<-done
+	return nil
+}
+
+func saveEntry(fn string, p interface{}) error {
+	var err error
+	var createParams db.CreateEntryParams
+	var updateParams db.UpdateEntryParams
+
+	b, err := ioutil.ReadFile(fn)
+	if err != nil {
+		return err
+	}
+	s := string(b)
+
+	header, err := cromp.ParseHeader(s)
+	if err != nil {
+		return err
+	}
+
+	result := make(map[string]string)
+
+	switch p.(type) {
+	case db.GetEntryParams:
+		a, ok := p.(db.GetEntryParams)
+		if !ok {
+			return fmt.Errorf("invaled entry type")
+		}
+		updateParams.EntryID = a.EntryID
+		updateParams.Body = s
+		updateParams.Title = header.Title
+
+		err = Post("/entries/update", updateParams, result)
+		if err != nil {
+			return err
+		}
+	case db.CreateEntryParams:
+		fmt.Println("Create")
+		a, ok := p.(db.CreateEntryParams)
+		if !ok {
+			return fmt.Errorf("invaled entry type")
+		}
+		createParams.EntryID = a.EntryID
+		createParams.Body = s
+		createParams.Title = header.Title
+
+		err = Post("/entries/add", createParams, result)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // OpenInEditor opens an existing cromp doc in $EDITOR
 func OpenInEditor(id uuid.UUID) (*string, error) {
 	var err error
@@ -136,6 +240,15 @@ func OpenInEditor(id uuid.UUID) (*string, error) {
 		defer os.Remove(f.Name())
 		f.Write([]byte(resp.Body))
 
+		done := make(chan bool)
+		go func() {
+			err = StartWatcher(f.Name(), params, saveEntry)
+			if err != nil {
+				log.Println(err)
+			}
+			<-done
+		}()
+
 		cmd := exec.Command(cmd, args...)
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
@@ -148,6 +261,7 @@ func OpenInEditor(id uuid.UUID) (*string, error) {
 		if err != nil {
 			return nil, err
 		}
+		close(done)
 		s = string(b)
 	}
 
