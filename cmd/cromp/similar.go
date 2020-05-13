@@ -35,9 +35,11 @@ func NewSimilar() *ffcli.Command {
 			}
 
 			for _, e := range *resp {
-				fmt.Printf("%s\t%s\n",
+				fmt.Printf("%f : %s\n\t%s\n",
+					e.Similarity,
 					e.Title,
 					e.Headline)
+				fmt.Printf("-----------------------------------\n")
 			}
 
 			return nil

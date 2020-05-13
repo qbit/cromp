@@ -32,7 +32,8 @@ SELECT entry_id, similarity(body, $2) as similarity,
 	title from entries,
 	to_tsquery($2) q
 WHERE user_id = $1 and
-	similarity(body, $2) > 0.0
+	similarity(body, $2) > 0.0 and
+	similarity(body, $2) < 1.0
 	order by similarity DESC
 	LIMIT 10;
 
