@@ -5,6 +5,7 @@ package db
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,8 +23,8 @@ RETURNING user_id, created_at, first_name, last_name, username, email, token, to
 `
 
 type AuthUserParams struct {
-	Crypt    interface{} `json:"crypt"`
-	Username string      `json:"username"`
+	Crypt    string `json:"crypt"`
+	Username string `json:"username"`
 }
 
 type AuthUserRow struct {
@@ -308,15 +309,15 @@ WHERE user_id = $1 and
 `
 
 type SimilarEntriesParams struct {
-	UserID     int64       `json:"user_id"`
-	Similarity interface{} `json:"similarity"`
+	UserID     int64  `json:"user_id"`
+	Similarity string `json:"similarity"`
 }
 
 type SimilarEntriesRow struct {
-	EntryID    uuid.UUID   `json:"entry_id"`
-	Similarity interface{} `json:"similarity"`
-	Headline   interface{} `json:"headline"`
-	Title      string      `json:"title"`
+	EntryID    uuid.UUID       `json:"entry_id"`
+	Similarity float32         `json:"similarity"`
+	Headline   json.RawMessage `json:"headline"`
+	Title      string          `json:"title"`
 }
 
 func (q *Queries) SimilarEntries(ctx context.Context, arg SimilarEntriesParams) ([]SimilarEntriesRow, error) {
